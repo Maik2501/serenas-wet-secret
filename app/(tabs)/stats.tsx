@@ -1,10 +1,11 @@
 import { useJournal } from '@/contexts/JournalContext';
 import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 export default function StatsScreen() {
   const { entries, cryingDays } = useJournal();
+  const [showCryingStreak, setShowCryingStreak] = useState(false);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -58,8 +60,11 @@ export default function StatsScreen() {
 
     const maxMonthCount = Math.max(...last6Months.map(m => m.count), 1);
 
-    let longestStreak = 0;
-    let currentStreak = 0;
+    let longestDryStreak = 0;
+    let currentDryStreak = 0;
+    let longestCryStreak = 0;
+    let currentCryStreak = 0;
+
     if (cryingDays.length > 0) {
       const sortedDates = [...cryingDays]
         .map(d => new Date(d.date).getTime())
@@ -69,6 +74,8 @@ export default function StatsScreen() {
       today.setHours(0, 0, 0, 0);
       
       let prevDate: number | null = null;
+      let consecutiveCryDays = 1;
+      
       for (const dateTime of sortedDates) {
         if (prevDate === null) {
           prevDate = dateTime;
@@ -76,15 +83,34 @@ export default function StatsScreen() {
         }
         const gap = Math.floor((dateTime - prevDate) / (24 * 60 * 60 * 1000));
         if (gap > 1) {
-          longestStreak = Math.max(longestStreak, gap - 1);
+          longestDryStreak = Math.max(longestDryStreak, gap - 1);
+          longestCryStreak = Math.max(longestCryStreak, consecutiveCryDays);
+          consecutiveCryDays = 1;
+        } else if (gap === 1) {
+          consecutiveCryDays++;
         }
         prevDate = dateTime;
       }
+      longestCryStreak = Math.max(longestCryStreak, consecutiveCryDays);
 
       const lastCryDate = sortedDates[sortedDates.length - 1];
       const daysSinceLast = Math.floor((today.getTime() - lastCryDate) / (24 * 60 * 60 * 1000));
-      currentStreak = daysSinceLast;
-      longestStreak = Math.max(longestStreak, currentStreak);
+      currentDryStreak = daysSinceLast;
+      longestDryStreak = Math.max(longestDryStreak, currentDryStreak);
+
+      // Calculate current crying streak (if today or recent days are crying days)
+      const todayTime = today.getTime();
+      let checkDate = todayTime;
+      currentCryStreak = 0;
+      for (let i = sortedDates.length - 1; i >= 0; i--) {
+        const diff = Math.floor((checkDate - sortedDates[i]) / (24 * 60 * 60 * 1000));
+        if (diff === 0 || diff === 1) {
+          currentCryStreak++;
+          checkDate = sortedDates[i];
+        } else {
+          break;
+        }
+      }
     }
 
     const avgPerWeek = totalCries > 0 && cryingDays.length > 0
@@ -102,8 +128,10 @@ export default function StatsScreen() {
       mostEmotionalDay,
       last6Months,
       maxMonthCount,
-      longestStreak,
-      currentStreak,
+      longestDryStreak,
+      currentDryStreak,
+      longestCryStreak,
+      currentCryStreak,
       avgPerWeek: avgPerWeek.toFixed(1),
     };
   }, [entries, cryingDays]);
@@ -113,14 +141,20 @@ export default function StatsScreen() {
     title: string,
     value: string | number,
     subtitle: string,
-    gradient: string[]
+    gradient: string[],
+    onPress?: () => void
   ) => (
-    <View style={[styles.statCard, { backgroundColor: gradient[0] }]}>
+    <TouchableOpacity 
+      style={[styles.statCard, { backgroundColor: gradient[0] }]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.8 : 1}
+    >
       <View style={styles.statCardIcon}>{icon}</View>
       <Text style={styles.statCardValue}>{value}</Text>
       <Text style={styles.statCardTitle}>{title}</Text>
       <Text style={styles.statCardSubtitle}>{subtitle}</Text>
-    </View>
+      {onPress && <Text style={styles.tapHint}>tap to switch</Text>}
+    </TouchableOpacity>
   );
 
   return (
@@ -168,17 +202,19 @@ export default function StatsScreen() {
           <View style={styles.cardsRow}>
             {renderStatCard(
               <Flame color="#fff" size={24} />,
-              'Current Streak',
-              stats.currentStreak,
-              'days dry',
-              ['#FF6B6B']
+              showCryingStreak ? 'Crying Streak' : 'Dry Streak',
+              showCryingStreak ? stats.currentCryStreak : stats.currentDryStreak,
+              showCryingStreak ? 'days crying' : 'days dry',
+              [showCryingStreak ? '#8B5CF6' : '#FF6B6B'],
+              () => setShowCryingStreak(!showCryingStreak)
             )}
             {renderStatCard(
               <TrendingUp color="#fff" size={24} />,
-              'Longest Streak',
-              stats.longestStreak,
-              'days without',
-              ['#4ECDC4']
+              showCryingStreak ? 'Longest Crying' : 'Longest Dry',
+              showCryingStreak ? stats.longestCryStreak : stats.longestDryStreak,
+              showCryingStreak ? 'consecutive days' : 'days without',
+              [showCryingStreak ? '#A78BFA' : '#4ECDC4'],
+              () => setShowCryingStreak(!showCryingStreak)
             )}
           </View>
 
@@ -274,8 +310,8 @@ export default function StatsScreen() {
             <Text style={styles.insightText}>
               {stats.totalCries === 0 
                 ? "Start tracking your emotional moments to see patterns emerge."
-                : stats.currentStreak > 7
-                  ? `You've been dry for ${stats.currentStreak} days. Remember, it's okay to let it out sometimes.`
+                : stats.currentDryStreak > 7
+                  ? `You've been dry for ${stats.currentDryStreak} days. Remember, it's okay to let it out sometimes.`
                   : stats.criesLast7Days > 5
                     ? "You've been very in touch with your emotions lately. That takes courage."
                     : `${stats.mostEmotionalDay}s seem to bring out your feelings. Be gentle with yourself.`
@@ -412,6 +448,12 @@ const styles = StyleSheet.create({
   statCardSubtitle: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
+  },
+  tapHint: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 8,
+    fontStyle: 'italic' as const,
   },
   chartCard: {
     backgroundColor: '#fff',

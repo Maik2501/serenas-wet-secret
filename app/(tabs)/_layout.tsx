@@ -1,6 +1,6 @@
 // template
 import { Tabs } from "expo-router";
-import { BookOpen, Calendar } from "lucide-react-native";
+import { BookOpen, Calendar, BarChart3 } from "lucide-react-native";
 import React from "react";
 
 export default function TabLayout() {
@@ -29,6 +29,13 @@ export default function TabLayout() {
         options={{
           title: "Calendar",
           tabBarIcon: ({ color }) => <Calendar color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: "Stats",
+          tabBarIcon: ({ color }) => <BarChart3 color={color} size={24} />,
         }}
       />
     </Tabs>

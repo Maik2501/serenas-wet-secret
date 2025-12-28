@@ -16,6 +16,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export default function StatsScreen() {
   const { entries, cryingDays } = useJournal();
   const [showCryingStreak, setShowCryingStreak] = useState(false);
+  const [showPeakTime, setShowPeakTime] = useState(false);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -40,6 +41,19 @@ export default function StatsScreen() {
 
     const maxWeekdayCount = Math.max(...weekdayCounts, 1);
     const mostEmotionalDay = WEEKDAYS[weekdayCounts.indexOf(Math.max(...weekdayCounts))];
+
+    const hourCounts = new Array(24).fill(0);
+    cryingEntries.forEach(e => {
+      const hour = new Date(e.createdAt).getHours();
+      hourCounts[hour]++;
+    });
+    const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+    const formatPeakTime = (hour: number) => {
+      if (hour === 0) return '12 AM';
+      if (hour === 12) return '12 PM';
+      return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+    };
+    const peakTimeLabel = formatPeakTime(peakHour);
 
     const monthCounts: { [key: string]: number } = {};
     cryingDays.forEach(d => {
@@ -133,6 +147,8 @@ export default function StatsScreen() {
       longestCryStreak,
       currentCryStreak,
       avgPerWeek: avgPerWeek.toFixed(1),
+      peakTimeLabel,
+      peakHour,
     };
   }, [entries, cryingDays]);
 
@@ -221,10 +237,11 @@ export default function StatsScreen() {
           <View style={styles.cardsRow}>
             {renderStatCard(
               <Heart color="#fff" size={24} />,
-              'Peak Day',
-              stats.mostEmotionalDay,
-              'most emotional',
-              ['#A78BFA']
+              showPeakTime ? 'Peak Time' : 'Peak Day',
+              showPeakTime ? stats.peakTimeLabel : stats.mostEmotionalDay,
+              showPeakTime ? 'most emotional hour' : 'most emotional day',
+              [showPeakTime ? '#F472B6' : '#A78BFA'],
+              () => setShowPeakTime(!showPeakTime)
             )}
             {renderStatCard(
               <Calendar color="#fff" size={24} />,

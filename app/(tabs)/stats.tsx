@@ -2,7 +2,8 @@ import { useJournal } from '@/contexts/JournalContext';
 import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap, ChevronDown, X, Check } from 'lucide-react-native';
 import DonationCard from '@/components/DonationCard';
 import { CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS, CryIntensity } from '@/types/journal';
-import React, { useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -17,6 +18,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const STATS_PREFS_KEY = 'stats_preferences';
+
+interface StatsPreferences {
+  showCryingStreak: boolean;
+  showPeakTime: boolean;
+  showIntensityAvg: boolean;
+  selectedIntensity: CryIntensity;
+  timeframe: TimeframeOption;
+  customStartDate: number;
+  customEndDate: number;
+}
 
 type TimeframeOption = 'week' | 'month' | 'year' | 'all' | 'custom';
 
@@ -42,6 +55,51 @@ export default function StatsScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [tempStartDate, setTempStartDate] = useState<Date>(customStartDate);
   const [tempEndDate, setTempEndDate] = useState<Date>(customEndDate);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadPrefs = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STATS_PREFS_KEY);
+        if (stored) {
+          const prefs: StatsPreferences = JSON.parse(stored);
+          setShowCryingStreak(prefs.showCryingStreak);
+          setShowPeakTime(prefs.showPeakTime);
+          setShowIntensityAvg(prefs.showIntensityAvg);
+          setSelectedIntensity(prefs.selectedIntensity);
+          setTimeframe(prefs.timeframe);
+          setCustomStartDate(new Date(prefs.customStartDate));
+          setCustomEndDate(new Date(prefs.customEndDate));
+        }
+      } catch (error) {
+        console.log('Failed to load stats preferences:', error);
+      } finally {
+        setPrefsLoaded(true);
+      }
+    };
+    loadPrefs();
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded) return;
+    const savePrefs = async () => {
+      try {
+        const prefs: StatsPreferences = {
+          showCryingStreak,
+          showPeakTime,
+          showIntensityAvg,
+          selectedIntensity,
+          timeframe,
+          customStartDate: customStartDate.getTime(),
+          customEndDate: customEndDate.getTime(),
+        };
+        await AsyncStorage.setItem(STATS_PREFS_KEY, JSON.stringify(prefs));
+      } catch (error) {
+        console.log('Failed to save stats preferences:', error);
+      }
+    };
+    savePrefs();
+  }, [prefsLoaded, showCryingStreak, showPeakTime, showIntensityAvg, selectedIntensity, timeframe, customStartDate, customEndDate]);
 
   const { startDate, endDate } = useMemo(() => {
     const now = new Date();

@@ -19,6 +19,7 @@ export default function StatsScreen() {
   const [showCryingStreak, setShowCryingStreak] = useState(false);
   const [showPeakTime, setShowPeakTime] = useState(false);
   const [showIntensityAvg, setShowIntensityAvg] = useState(false);
+  const [selectedIntensity, setSelectedIntensity] = useState<CryIntensity>(4);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -264,7 +265,7 @@ export default function StatsScreen() {
               showPeakTime ? 'Peak Time' : 'Peak Day',
               showPeakTime ? stats.peakTimeLabel : stats.mostEmotionalDay,
               showPeakTime ? 'most emotional hour' : 'most emotional day',
-              [showPeakTime ? '#F472B6' : '#A78BFA'],
+              [showPeakTime ? '#F472B6' : '#6366F1'],
               () => setShowPeakTime(!showPeakTime)
             )}
             {renderStatCard(
@@ -291,10 +292,11 @@ export default function StatsScreen() {
             )}
             {renderStatCard(
               <Droplets color="#fff" size={24} />,
-              'Breakdowns',
-              stats.intensityCounts[4],
-              'mental breakdown days',
-              ['#EF4444']
+              CRY_INTENSITY_LABELS[selectedIntensity],
+              stats.intensityCounts[selectedIntensity],
+              `${CRY_INTENSITY_EMOJIS[selectedIntensity]} cry sessions`,
+              [selectedIntensity === 4 ? '#EF4444' : selectedIntensity === 3 ? '#F97316' : selectedIntensity === 2 ? '#FBBF24' : '#22C55E'],
+              () => setSelectedIntensity(prev => prev === 1 ? 4 : (prev - 1) as CryIntensity)
             )}
           </View>
 

@@ -1,5 +1,5 @@
 import { useJournal } from '@/contexts/JournalContext';
-import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap } from 'lucide-react-native';
+import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap, ChevronDown, X, Check } from 'lucide-react-native';
 import { CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS, CryIntensity } from '@/types/journal';
 import React, { useMemo, useState } from 'react';
 import {
@@ -8,11 +8,24 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+type TimeframeOption = 'week' | 'month' | 'year' | 'all' | 'custom';
+
+const TIMEFRAME_LABELS: Record<TimeframeOption, string> = {
+  week: 'This Week',
+  month: 'This Month',
+  year: 'This Year',
+  all: 'All Time',
+  custom: 'Custom',
+};
 
 export default function StatsScreen() {
   const { entries, cryingDays } = useJournal();
@@ -20,22 +33,81 @@ export default function StatsScreen() {
   const [showPeakTime, setShowPeakTime] = useState(false);
   const [showIntensityAvg, setShowIntensityAvg] = useState(false);
   const [selectedIntensity, setSelectedIntensity] = useState<CryIntensity>(4);
+  const [timeframe, setTimeframe] = useState<TimeframeOption>('all');
+  const [showTimeframePicker, setShowTimeframePicker] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState<Date>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+  const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState<Date>(customStartDate);
+  const [tempEndDate, setTempEndDate] = useState<Date>(customEndDate);
+
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    
+    switch (timeframe) {
+      case 'week': {
+        const start = new Date(now);
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        return { startDate: start, endDate: now };
+      }
+      case 'month': {
+        const start = new Date(now);
+        start.setDate(start.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
+        return { startDate: start, endDate: now };
+      }
+      case 'year': {
+        const start = new Date(now);
+        start.setFullYear(start.getFullYear() - 1);
+        start.setHours(0, 0, 0, 0);
+        return { startDate: start, endDate: now };
+      }
+      case 'custom': {
+        const start = new Date(customStartDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(customEndDate);
+        end.setHours(23, 59, 59, 999);
+        return { startDate: start, endDate: end };
+      }
+      default:
+        return { startDate: null, endDate: null };
+    }
+  }, [timeframe, customStartDate, customEndDate]);
+
+  const filteredCryingDays = useMemo(() => {
+    if (!startDate || !endDate) return cryingDays;
+    return cryingDays.filter(d => {
+      const date = new Date(d.date);
+      return date >= startDate && date <= endDate;
+    });
+  }, [cryingDays, startDate, endDate]);
+
+  const filteredEntries = useMemo(() => {
+    if (!startDate || !endDate) return entries;
+    return entries.filter(e => {
+      const date = new Date(e.createdAt);
+      return date >= startDate && date <= endDate;
+    });
+  }, [entries, startDate, endDate]);
 
   const stats = useMemo(() => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const totalCries = cryingDays.reduce((sum, d) => sum + (d.count || 1), 0);
-    const totalEntries = entries.length;
+    const totalCries = filteredCryingDays.reduce((sum, d) => sum + (d.count || 1), 0);
+    const totalEntries = filteredEntries.length;
 
-    const recentCries = cryingDays.filter(d => new Date(d.date) >= thirtyDaysAgo);
+    const recentCries = filteredCryingDays.filter(d => new Date(d.date) >= thirtyDaysAgo);
     const criesLast30Days = recentCries.reduce((sum, d) => sum + (d.count || 1), 0);
 
-    const weekCries = cryingDays.filter(d => new Date(d.date) >= sevenDaysAgo);
+    const weekCries = filteredCryingDays.filter(d => new Date(d.date) >= sevenDaysAgo);
     const criesLast7Days = weekCries.reduce((sum, d) => sum + (d.count || 1), 0);
 
-    const cryingEntries = entries.filter(e => e.wasCrying);
+    const cryingEntries = filteredEntries.filter(e => e.wasCrying);
     const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
     cryingEntries.forEach(e => {
       const day = new Date(e.createdAt).getDay();
@@ -59,7 +131,7 @@ export default function StatsScreen() {
     const peakTimeLabel = formatPeakTime(peakHour);
 
     const monthCounts: { [key: string]: number } = {};
-    cryingDays.forEach(d => {
+    filteredCryingDays.forEach(d => {
       const date = new Date(d.date);
       const key = `${date.getFullYear()}-${date.getMonth()}`;
       monthCounts[key] = (monthCounts[key] || 0) + (d.count || 1);
@@ -82,8 +154,8 @@ export default function StatsScreen() {
     let longestCryStreak = 0;
     let currentCryStreak = 0;
 
-    if (cryingDays.length > 0) {
-      const sortedDates = [...cryingDays]
+    if (filteredCryingDays.length > 0) {
+      const sortedDates = [...filteredCryingDays]
         .map(d => new Date(d.date).getTime())
         .sort((a, b) => a - b);
 
@@ -130,8 +202,8 @@ export default function StatsScreen() {
       }
     }
 
-    const avgPerWeek = totalCries > 0 && cryingDays.length > 0
-      ? (totalCries / Math.max(1, Math.ceil((now.getTime() - new Date(cryingDays.sort((a, b) => 
+    const avgPerWeek = totalCries > 0 && filteredCryingDays.length > 0
+      ? (totalCries / Math.max(1, Math.ceil((now.getTime() - new Date(filteredCryingDays.sort((a, b) => 
           new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date || now).getTime()) / (7 * 24 * 60 * 60 * 1000))))
       : 0;
 
@@ -175,7 +247,35 @@ export default function StatsScreen() {
       maxIntensityCount,
       totalIntensityEntries,
     };
-  }, [entries, cryingDays]);
+  }, [filteredEntries, filteredCryingDays]);
+
+  const formatDateShort = (date: Date) => {
+    return `${MONTHS[date.getMonth()]} ${date.getDate()}`;
+  };
+
+  const getTimeframeLabel = () => {
+    if (timeframe === 'custom') {
+      return `${formatDateShort(customStartDate)} - ${formatDateShort(customEndDate)}`;
+    }
+    return TIMEFRAME_LABELS[timeframe];
+  };
+
+  const handleTimeframeSelect = (option: TimeframeOption) => {
+    if (option === 'custom') {
+      setTempStartDate(customStartDate);
+      setTempEndDate(customEndDate);
+    }
+    setTimeframe(option);
+    if (option !== 'custom') {
+      setShowTimeframePicker(false);
+    }
+  };
+
+  const applyCustomDates = () => {
+    setCustomStartDate(tempStartDate);
+    setCustomEndDate(tempEndDate);
+    setShowTimeframePicker(false);
+  };
 
   const renderStatCard = (
     icon: React.ReactNode,
@@ -212,15 +312,25 @@ export default function StatsScreen() {
           </View>
 
           <View style={styles.heroCard}>
-            <View style={styles.heroContent}>
+            <TouchableOpacity 
+              style={styles.heroContent}
+              onPress={() => setShowTimeframePicker(true)}
+              activeOpacity={0.8}
+            >
               <View style={styles.heroIconContainer}>
                 <Droplets color="#fff" size={32} />
               </View>
               <View style={styles.heroTextContainer}>
                 <Text style={styles.heroValue}>{stats.totalCries}</Text>
-                <Text style={styles.heroLabel}>Total Tears Shed</Text>
+                <View style={styles.heroLabelRow}>
+                  <Text style={styles.heroLabel}>Total Tears Shed</Text>
+                </View>
               </View>
-            </View>
+              <View style={styles.timeframeBadge}>
+                <Text style={styles.timeframeBadgeText}>{getTimeframeLabel()}</Text>
+                <ChevronDown color="#8B5CF6" size={14} />
+              </View>
+            </TouchableOpacity>
             <View style={styles.heroDivider} />
             <View style={styles.heroStats}>
               <View style={styles.heroStatItem}>
@@ -431,6 +541,123 @@ export default function StatsScreen() {
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
+
+        <Modal
+          visible={showTimeframePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowTimeframePicker(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowTimeframePicker(false)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1} 
+              style={styles.modalContent}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Timeframe</Text>
+                <TouchableOpacity onPress={() => setShowTimeframePicker(false)}>
+                  <X color="#64748B" size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.timeframeOptions}>
+                {(['week', 'month', 'year', 'all', 'custom'] as TimeframeOption[]).map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.timeframeOption,
+                      timeframe === option && styles.timeframeOptionActive,
+                    ]}
+                    onPress={() => handleTimeframeSelect(option)}
+                  >
+                    <Text style={[
+                      styles.timeframeOptionText,
+                      timeframe === option && styles.timeframeOptionTextActive,
+                    ]}>
+                      {TIMEFRAME_LABELS[option]}
+                    </Text>
+                    {timeframe === option && (
+                      <Check color="#8B5CF6" size={20} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {timeframe === 'custom' && (
+                <View style={styles.customDateSection}>
+                  <View style={styles.datePickerRow}>
+                    <Text style={styles.dateLabel}>From</Text>
+                    <TouchableOpacity 
+                      style={styles.dateButton}
+                      onPress={() => setShowStartPicker(true)}
+                    >
+                      <Text style={styles.dateButtonText}>
+                        {tempStartDate.toLocaleDateString()}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.datePickerRow}>
+                    <Text style={styles.dateLabel}>To</Text>
+                    <TouchableOpacity 
+                      style={styles.dateButton}
+                      onPress={() => setShowEndPicker(true)}
+                    >
+                      <Text style={styles.dateButtonText}>
+                        {tempEndDate.toLocaleDateString()}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {(showStartPicker || Platform.OS === 'web') && (
+                    <View style={styles.pickerContainer}>
+                      <Text style={styles.pickerLabel}>Start Date</Text>
+                      <DateTimePicker
+                        value={tempStartDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event, date) => {
+                          setShowStartPicker(Platform.OS === 'ios');
+                          if (date) setTempStartDate(date);
+                        }}
+                        maximumDate={tempEndDate}
+                      />
+                    </View>
+                  )}
+
+                  {(showEndPicker || Platform.OS === 'web') && (
+                    <View style={styles.pickerContainer}>
+                      <Text style={styles.pickerLabel}>End Date</Text>
+                      <DateTimePicker
+                        value={tempEndDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event, date) => {
+                          setShowEndPicker(Platform.OS === 'ios');
+                          if (date) setTempEndDate(date);
+                        }}
+                        minimumDate={tempStartDate}
+                        maximumDate={new Date()}
+                      />
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    style={styles.applyButton}
+                    onPress={applyCustomDates}
+                  >
+                    <Text style={styles.applyButtonText}>Apply</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -496,6 +723,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500' as const,
+  },
+  heroLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeframeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+    marginLeft: 'auto',
+  },
+  timeframeBadgeText: {
+    fontSize: 12,
+    color: '#A78BFA',
+    fontWeight: '600' as const,
   },
   heroDivider: {
     height: 1,
@@ -690,6 +937,105 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: '#1E293B',
+  },
+  timeframeOptions: {
+    gap: 8,
+  },
+  timeframeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  timeframeOptionActive: {
+    backgroundColor: '#EDE9FE',
+  },
+  timeframeOptionText: {
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '500' as const,
+  },
+  timeframeOptionTextActive: {
+    color: '#8B5CF6',
+    fontWeight: '600' as const,
+  },
+  customDateSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dateLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500' as const,
+  },
+  dateButton: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  dateButtonText: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '500' as const,
+  },
+  pickerContainer: {
+    marginTop: 12,
+  },
+  pickerLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 4,
+    fontWeight: '500' as const,
+  },
+  applyButton: {
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  applyButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600' as const,
   },
   intensityChart: {
     gap: 12,

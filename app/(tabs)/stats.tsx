@@ -1,5 +1,6 @@
 import { useJournal } from '@/contexts/JournalContext';
 import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap, ChevronDown, X, Check } from 'lucide-react-native';
+import DonationCard from '@/components/DonationCard';
 import { CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS, CryIntensity } from '@/types/journal';
 import React, { useMemo, useState } from 'react';
 import {
@@ -538,6 +539,8 @@ export default function StatsScreen() {
               }
             </Text>
           </View>
+
+          <DonationCard />
 
           <View style={styles.bottomSpacer} />
         </ScrollView>

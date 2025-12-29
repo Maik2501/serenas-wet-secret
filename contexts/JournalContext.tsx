@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import type { CryingDay, JournalEntry } from '../types/journal';
+import type { CryingDay, CryIntensity, JournalEntry } from '../types/journal';
 
 const STORAGE_KEY_ENTRIES = 'journal_entries';
 const STORAGE_KEY_CRYING = 'crying_days';
@@ -129,13 +129,14 @@ export const [JournalContext, useJournal] = createContextHook(() => {
     }
   };
 
-  const addEntry = (content: string, wasCrying: boolean, customDate?: Date) => {
+  const addEntry = (content: string, wasCrying: boolean, customDate?: Date, intensity?: CryIntensity) => {
     const entryDate = customDate || new Date();
     const newEntry: JournalEntry = {
       id: Date.now().toString() + Math.random().toString(36).slice(2),
       content,
       createdAt: entryDate.getTime(),
       wasCrying,
+      intensity: wasCrying ? intensity : undefined,
     };
 
     const updated = [newEntry, ...entries].sort((a, b) => b.createdAt - a.createdAt);

@@ -1,4 +1,5 @@
 import { useJournal } from '@/contexts/JournalContext';
+import { CryIntensity, CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS } from '@/types/journal';
 import * as Haptics from 'expo-haptics';
 import { BookOpen, Calendar, Clock, Mic, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
@@ -28,6 +29,7 @@ export default function JournalScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+  const [intensity, setIntensity] = useState<CryIntensity>(2);
 
   const handleVoiceInput = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -77,11 +79,12 @@ export default function JournalScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     
-    addEntry(entryText.trim(), wasCrying, selectedDate);
+    addEntry(entryText.trim(), wasCrying, selectedDate, wasCrying ? intensity : undefined);
     setEntryText('');
     setWasCrying(false);
+    setIntensity(2);
     setSelectedDate(new Date());
-  }, [entryText, wasCrying, selectedDate, addEntry]);
+  }, [entryText, wasCrying, selectedDate, addEntry, intensity]);
 
   const handleDelete = useCallback((id: string) => {
     if (Platform.OS === 'web') {
@@ -189,6 +192,23 @@ export default function JournalScreen() {
               </Pressable>
             </View>
 
+            {wasCrying && (
+              <View style={styles.intensityRow}>
+                {([1, 2, 3, 4] as CryIntensity[]).map((level) => (
+                  <Pressable
+                    key={level}
+                    onPress={() => setIntensity(level)}
+                    style={[styles.intensityButton, intensity === level && styles.intensityButtonActive]}
+                  >
+                    <Text style={styles.intensityEmoji}>{CRY_INTENSITY_EMOJIS[level]}</Text>
+                    <Text style={[styles.intensityLabel, intensity === level && styles.intensityLabelActive]} numberOfLines={1}>
+                      {CRY_INTENSITY_LABELS[level]}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
             <View style={styles.dateTimeRow}>
               <Pressable
                 onPress={() => setShowDatePicker(true)}
@@ -275,7 +295,7 @@ export default function JournalScreen() {
           <View style={styles.entryCard}>
             <View style={styles.entryHeader}>
               <View style={styles.entryHeaderLeft}>
-                <Text style={styles.entryEmoji}>{item.wasCrying ? '😢' : '😊'}</Text>
+                <Text style={styles.entryEmoji}>{item.wasCrying ? (item.intensity ? CRY_INTENSITY_EMOJIS[item.intensity] : '😢') : '😊'}</Text>
                 <View>
                   <Text style={styles.entryDate}>
                     {new Date(item.createdAt).toLocaleDateString('en-US', {
@@ -298,6 +318,11 @@ export default function JournalScreen() {
                 <Trash2 color="#EF4444" size={18} />
               </Pressable>
             </View>
+            {item.wasCrying && item.intensity && (
+              <View style={styles.entryIntensityBadge}>
+                <Text style={styles.entryIntensityText}>{CRY_INTENSITY_LABELS[item.intensity]}</Text>
+              </View>
+            )}
             <Text style={styles.entryContent}>{item.content}</Text>
           </View>
         )}
@@ -624,6 +649,52 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#475569',
     lineHeight: 22,
+  },
+  intensityRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 12,
+  },
+  intensityButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  intensityButtonActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+  },
+  intensityEmoji: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  intensityLabel: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '500' as const,
+    textAlign: 'center' as const,
+  },
+  intensityLabelActive: {
+    color: '#DC2626',
+    fontWeight: '600' as const,
+  },
+  entryIntensityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  entryIntensityText: {
+    fontSize: 11,
+    color: '#DC2626',
+    fontWeight: '500' as const,
   },
   modalOverlay: {
     flex: 1,

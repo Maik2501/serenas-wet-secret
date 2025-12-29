@@ -1,5 +1,6 @@
 import { useJournal } from '@/contexts/JournalContext';
-import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp } from 'lucide-react-native';
+import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap } from 'lucide-react-native';
+import { CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS, CryIntensity } from '@/types/journal';
 import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
@@ -17,6 +18,7 @@ export default function StatsScreen() {
   const { entries, cryingDays } = useJournal();
   const [showCryingStreak, setShowCryingStreak] = useState(false);
   const [showPeakTime, setShowPeakTime] = useState(false);
+  const [showIntensityAvg, setShowIntensityAvg] = useState(false);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -132,6 +134,23 @@ export default function StatsScreen() {
           new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date || now).getTime()) / (7 * 24 * 60 * 60 * 1000))))
       : 0;
 
+    // Intensity stats
+    const intensityCounts: Record<CryIntensity, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    const entriesWithIntensity = cryingEntries.filter(e => e.intensity);
+    entriesWithIntensity.forEach(e => {
+      if (e.intensity) intensityCounts[e.intensity]++;
+    });
+
+    const totalIntensityEntries = entriesWithIntensity.length;
+    const avgIntensity = totalIntensityEntries > 0
+      ? entriesWithIntensity.reduce((sum, e) => sum + (e.intensity || 0), 0) / totalIntensityEntries
+      : 0;
+
+    const mostCommonIntensity = (Object.entries(intensityCounts) as [string, number][])
+      .sort((a, b) => b[1] - a[1])[0];
+    const dominantIntensity = parseInt(mostCommonIntensity[0]) as CryIntensity;
+    const maxIntensityCount = Math.max(...Object.values(intensityCounts), 1);
+
     return {
       totalCries,
       totalEntries,
@@ -149,6 +168,11 @@ export default function StatsScreen() {
       avgPerWeek: avgPerWeek.toFixed(1),
       peakTimeLabel,
       peakHour,
+      intensityCounts,
+      avgIntensity,
+      dominantIntensity,
+      maxIntensityCount,
+      totalIntensityEntries,
     };
   }, [entries, cryingDays]);
 
@@ -252,6 +276,28 @@ export default function StatsScreen() {
             )}
           </View>
 
+          <View style={styles.cardsRow}>
+            {renderStatCard(
+              <Zap color="#fff" size={24} />,
+              showIntensityAvg ? 'Avg Intensity' : 'Top Intensity',
+              showIntensityAvg 
+                ? stats.avgIntensity.toFixed(1)
+                : stats.totalIntensityEntries > 0 ? CRY_INTENSITY_EMOJIS[stats.dominantIntensity] : '—',
+              showIntensityAvg 
+                ? 'on scale of 4'
+                : stats.totalIntensityEntries > 0 ? CRY_INTENSITY_LABELS[stats.dominantIntensity] : 'no data yet',
+              [showIntensityAvg ? '#EC4899' : '#F97316'],
+              () => setShowIntensityAvg(!showIntensityAvg)
+            )}
+            {renderStatCard(
+              <Droplets color="#fff" size={24} />,
+              'Breakdowns',
+              stats.intensityCounts[4],
+              'mental breakdown days',
+              ['#EF4444']
+            )}
+          </View>
+
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <BarChart3 color="#64748B" size={20} />
@@ -316,6 +362,51 @@ export default function StatsScreen() {
                       />
                     </View>
                     <Text style={styles.monthLabel}>{month.month}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+              <Zap color="#64748B" size={20} />
+              <Text style={styles.chartTitle}>Intensity Breakdown</Text>
+            </View>
+            <Text style={styles.chartSubtitle}>Distribution of your emotional intensity</Text>
+            <View style={styles.intensityChart}>
+              {([1, 2, 3, 4] as CryIntensity[]).map((intensity) => {
+                const count = stats.intensityCounts[intensity];
+                const percentage = stats.totalIntensityEntries > 0 
+                  ? (count / stats.totalIntensityEntries) * 100 
+                  : 0;
+                const isMax = count === stats.maxIntensityCount && count > 0;
+                const colors = ['#86EFAC', '#FCD34D', '#FB923C', '#F87171'];
+                
+                return (
+                  <View key={intensity} style={styles.intensityRow}>
+                    <View style={styles.intensityLabelContainer}>
+                      <Text style={styles.intensityEmoji}>{CRY_INTENSITY_EMOJIS[intensity]}</Text>
+                      <Text style={[styles.intensityLabel, isMax && styles.intensityLabelActive]}>
+                        {CRY_INTENSITY_LABELS[intensity]}
+                      </Text>
+                    </View>
+                    <View style={styles.intensityBarContainer}>
+                      <View style={styles.intensityBarBg}>
+                        <View 
+                          style={[
+                            styles.intensityBar, 
+                            { 
+                              width: `${Math.max(percentage, 2)}%`,
+                              backgroundColor: colors[intensity - 1],
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={[styles.intensityCount, isMax && styles.intensityCountActive]}>
+                        {count}
+                      </Text>
+                    </View>
                   </View>
                 );
               })}
@@ -597,5 +688,59 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 24,
+  },
+  intensityChart: {
+    gap: 12,
+  },
+  intensityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  intensityLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: 140,
+  },
+  intensityEmoji: {
+    fontSize: 20,
+  },
+  intensityLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500' as const,
+  },
+  intensityLabelActive: {
+    color: '#1E293B',
+    fontWeight: '600' as const,
+  },
+  intensityBarContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  intensityBarBg: {
+    flex: 1,
+    height: 24,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  intensityBar: {
+    height: '100%',
+    borderRadius: 12,
+    minWidth: 4,
+  },
+  intensityCount: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '600' as const,
+    width: 28,
+    textAlign: 'right' as const,
+  },
+  intensityCountActive: {
+    color: '#1E293B',
   },
 });

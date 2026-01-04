@@ -12,8 +12,8 @@ import { Coffee, Heart, Sparkles } from 'lucide-react-native';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
-const REVENUECAT_API_KEY_IOS = 'your_ios_api_key';
-const REVENUECAT_API_KEY_ANDROID = 'your_android_api_key';
+const REVENUECAT_API_KEY_IOS = 'appl_TBgeqejwJvJprMxtGMQcPmXdjxp';
+const REVENUECAT_API_KEY_ANDROID = 'your_android_api_key'; // TODO: Add Android key when ready
 const PRODUCT_ID = 'tip_199';
 
 export default function DonationCard() {

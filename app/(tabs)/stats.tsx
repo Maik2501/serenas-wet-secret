@@ -1,5 +1,6 @@
 import { useJournal } from '@/contexts/JournalContext';
-import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap, ChevronDown, X, Check } from 'lucide-react-native';
+import { BarChart3, Calendar, Droplets, Flame, Heart, TrendingDown, TrendingUp, Zap, ChevronDown, X, Check, Shield } from 'lucide-react-native';
+import { router } from 'expo-router';
 import DonationCard from '@/components/DonationCard';
 import { CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS, CryIntensity } from '@/types/journal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -71,8 +72,8 @@ export default function StatsScreen() {
           setCustomStartDate(new Date(prefs.customStartDate));
           setCustomEndDate(new Date(prefs.customEndDate));
         }
-      } catch (error) {
-        console.log('Failed to load stats preferences:', error);
+      } catch {
+        // Failed to load preferences - use defaults
       } finally {
         setPrefsLoaded(true);
       }
@@ -94,8 +95,8 @@ export default function StatsScreen() {
           customEndDate: customEndDate.getTime(),
         };
         await AsyncStorage.setItem(STATS_PREFS_KEY, JSON.stringify(prefs));
-      } catch (error) {
-        console.log('Failed to save stats preferences:', error);
+      } catch {
+        // Failed to save preferences - non-critical
       }
     };
     savePrefs();
@@ -104,7 +105,7 @@ export default function StatsScreen() {
   const { startDate, endDate } = useMemo(() => {
     const now = new Date();
     now.setHours(23, 59, 59, 999);
-    
+
     switch (timeframe) {
       case 'week': {
         const start = new Date(now);
@@ -220,10 +221,10 @@ export default function StatsScreen() {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       let prevDate: number | null = null;
       let consecutiveCryDays = 1;
-      
+
       for (const dateTime of sortedDates) {
         if (prevDate === null) {
           prevDate = dateTime;
@@ -262,8 +263,8 @@ export default function StatsScreen() {
     }
 
     const avgPerWeek = totalCries > 0 && filteredCryingDays.length > 0
-      ? (totalCries / Math.max(1, Math.ceil((now.getTime() - new Date(filteredCryingDays.sort((a, b) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date || now).getTime()) / (7 * 24 * 60 * 60 * 1000))))
+      ? (totalCries / Math.max(1, Math.ceil((now.getTime() - new Date(filteredCryingDays.sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.date || now).getTime()) / (7 * 24 * 60 * 60 * 1000))))
       : 0;
 
     // Intensity stats
@@ -344,7 +345,7 @@ export default function StatsScreen() {
     gradient: string[],
     onPress?: () => void
   ) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.statCard, { backgroundColor: gradient[0] }]}
       onPress={onPress}
       activeOpacity={onPress ? 0.8 : 1}
@@ -360,8 +361,8 @@ export default function StatsScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
@@ -371,7 +372,7 @@ export default function StatsScreen() {
           </View>
 
           <View style={styles.heroCard}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.heroContent}
               onPress={() => setShowTimeframePicker(true)}
               activeOpacity={0.8}
@@ -450,10 +451,10 @@ export default function StatsScreen() {
             {renderStatCard(
               <Zap color="#fff" size={24} />,
               showIntensityAvg ? 'Avg Intensity' : 'Top Intensity',
-              showIntensityAvg 
+              showIntensityAvg
                 ? stats.avgIntensity.toFixed(1)
                 : stats.totalIntensityEntries > 0 ? CRY_INTENSITY_EMOJIS[stats.dominantIntensity] : '—',
-              showIntensityAvg 
+              showIntensityAvg
                 ? 'on scale of 4'
                 : stats.totalIntensityEntries > 0 ? CRY_INTENSITY_LABELS[stats.dominantIntensity] : 'no data yet',
               [showIntensityAvg ? '#EC4899' : '#F97316'],
@@ -477,22 +478,22 @@ export default function StatsScreen() {
             <Text style={styles.chartSubtitle}>When you tend to cry the most</Text>
             <View style={styles.weekdayChart}>
               {WEEKDAYS.map((day, index) => {
-                const height = stats.maxWeekdayCount > 0 
-                  ? (stats.weekdayCounts[index] / stats.maxWeekdayCount) * 100 
+                const height = stats.maxWeekdayCount > 0
+                  ? (stats.weekdayCounts[index] / stats.maxWeekdayCount) * 100
                   : 0;
                 const isMax = stats.weekdayCounts[index] === Math.max(...stats.weekdayCounts) && stats.weekdayCounts[index] > 0;
-                
+
                 return (
                   <View key={day} style={styles.barContainer}>
                     <View style={styles.barWrapper}>
-                      <View 
+                      <View
                         style={[
-                          styles.bar, 
-                          { 
+                          styles.bar,
+                          {
                             height: `${Math.max(height, 4)}%`,
                             backgroundColor: isMax ? '#8B5CF6' : '#E0E7FF',
                           }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={[styles.barLabel, isMax && styles.barLabelActive]}>{day}</Text>
@@ -513,23 +514,23 @@ export default function StatsScreen() {
             <Text style={styles.chartSubtitle}>Your emotional journey over time</Text>
             <View style={styles.monthChart}>
               {stats.last6Months.map((month, index) => {
-                const height = stats.maxMonthCount > 0 
-                  ? (month.count / stats.maxMonthCount) * 100 
+                const height = stats.maxMonthCount > 0
+                  ? (month.count / stats.maxMonthCount) * 100
                   : 0;
                 const colors = ['#FCD34D', '#FBBF24', '#F59E0B', '#D97706', '#B45309', '#92400E'];
-                
+
                 return (
                   <View key={month.month + index} style={styles.monthBarContainer}>
                     <Text style={styles.monthCount}>{month.count}</Text>
                     <View style={styles.monthBarWrapper}>
-                      <View 
+                      <View
                         style={[
-                          styles.monthBar, 
-                          { 
+                          styles.monthBar,
+                          {
                             height: `${Math.max(height, 4)}%`,
                             backgroundColor: colors[index],
                           }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={styles.monthLabel}>{month.month}</Text>
@@ -548,12 +549,12 @@ export default function StatsScreen() {
             <View style={styles.intensityChart}>
               {([1, 2, 3, 4] as CryIntensity[]).map((intensity) => {
                 const count = stats.intensityCounts[intensity];
-                const percentage = stats.totalIntensityEntries > 0 
-                  ? (count / stats.totalIntensityEntries) * 100 
+                const percentage = stats.totalIntensityEntries > 0
+                  ? (count / stats.totalIntensityEntries) * 100
                   : 0;
                 const isMax = count === stats.maxIntensityCount && count > 0;
                 const colors = ['#86EFAC', '#FCD34D', '#FB923C', '#F87171'];
-                
+
                 return (
                   <View key={intensity} style={styles.intensityRow}>
                     <View style={styles.intensityLabelContainer}>
@@ -564,14 +565,14 @@ export default function StatsScreen() {
                     </View>
                     <View style={styles.intensityBarContainer}>
                       <View style={styles.intensityBarBg}>
-                        <View 
+                        <View
                           style={[
-                            styles.intensityBar, 
-                            { 
+                            styles.intensityBar,
+                            {
                               width: `${Math.max(percentage, 2)}%`,
                               backgroundColor: colors[intensity - 1],
                             }
-                          ]} 
+                          ]}
                         />
                       </View>
                       <Text style={[styles.intensityCount, isMax && styles.intensityCountActive]}>
@@ -587,7 +588,7 @@ export default function StatsScreen() {
           <View style={styles.insightCard}>
             <Text style={styles.insightEmoji}>💧</Text>
             <Text style={styles.insightText}>
-              {stats.totalCries === 0 
+              {stats.totalCries === 0
                 ? "Start tracking your emotional moments to see patterns emerge."
                 : stats.currentDryStreak > 7
                   ? `You've been dry for ${stats.currentDryStreak} days. Remember, it's okay to let it out sometimes.`
@@ -600,6 +601,14 @@ export default function StatsScreen() {
 
           <DonationCard />
 
+          <TouchableOpacity
+            style={styles.privacyLink}
+            onPress={() => router.push('/privacy-policy')}
+          >
+            <Shield color="#64748B" size={18} />
+            <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+          </TouchableOpacity>
+
           <View style={styles.bottomSpacer} />
         </ScrollView>
 
@@ -609,13 +618,13 @@ export default function StatsScreen() {
           animationType="fade"
           onRequestClose={() => setShowTimeframePicker(false)}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
             onPress={() => setShowTimeframePicker(false)}
           >
-            <TouchableOpacity 
-              activeOpacity={1} 
+            <TouchableOpacity
+              activeOpacity={1}
               style={styles.modalContent}
               onPress={(e) => e.stopPropagation()}
             >
@@ -653,7 +662,7 @@ export default function StatsScreen() {
                 <View style={styles.customDateSection}>
                   <View style={styles.datePickerRow}>
                     <Text style={styles.dateLabel}>From</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.dateButton}
                       onPress={() => setShowStartPicker(true)}
                     >
@@ -662,10 +671,10 @@ export default function StatsScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
-                  
+
                   <View style={styles.datePickerRow}>
                     <Text style={styles.dateLabel}>To</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.dateButton}
                       onPress={() => setShowEndPicker(true)}
                     >
@@ -708,7 +717,7 @@ export default function StatsScreen() {
                     </View>
                   )}
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.applyButton}
                     onPress={applyCustomDates}
                   >
@@ -1151,5 +1160,18 @@ const styles = StyleSheet.create({
   },
   intensityCountActive: {
     color: '#1E293B',
+  },
+  privacyLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 16,
+  },
+  privacyLinkText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500' as const,
   },
 });

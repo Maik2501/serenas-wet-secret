@@ -34,7 +34,7 @@ export default function JournalScreen() {
   const handleVoiceInput = useCallback(() => {
     if (Platform.OS === 'web') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
+
       if (!SpeechRecognition) {
         Alert.alert('Not supported', 'Speech recognition is not supported in this browser');
         return;
@@ -47,7 +47,6 @@ export default function JournalScreen() {
 
       recognition.onstart = () => {
         setIsListening(true);
-        console.log('Voice recognition started');
       };
 
       recognition.onresult = (event: any) => {
@@ -56,8 +55,7 @@ export default function JournalScreen() {
         setIsListening(false);
       };
 
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
+      recognition.onerror = () => {
         setIsListening(false);
         Alert.alert('Error', 'Failed to recognize speech');
       };
@@ -74,11 +72,11 @@ export default function JournalScreen() {
 
   const handleAddEntry = useCallback(() => {
     if (!entryText.trim()) return;
-    
+
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    
+
     addEntry(entryText.trim(), wasCrying, selectedDate, wasCrying ? intensity : undefined);
     setEntryText('');
     setWasCrying(false);
@@ -376,8 +374,8 @@ export default function JournalScreen() {
             <Text style={styles.modalTitle}>Select Time</Text>
             <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={false}>
               {generateTimeOptions().map((time, index) => {
-                const isSelected = 
-                  selectedDate.getHours() === time.hour && 
+                const isSelected =
+                  selectedDate.getHours() === time.hour &&
                   Math.floor(selectedDate.getMinutes() / 15) * 15 === time.minute;
                 return (
                   <Pressable

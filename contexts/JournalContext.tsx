@@ -81,9 +81,7 @@ export const [JournalContext, useJournal] = createContextHook(() => {
         finalStatus = status;
       }
       
-      if (finalStatus !== 'granted') {
-        console.log('Notification permissions not granted');
-      }
+      // Permissions not granted - notifications won't work but app continues
     }
   };
 
@@ -123,9 +121,8 @@ export const [JournalContext, useJournal] = createContextHook(() => {
           seconds: Math.max(1, Math.floor(delaySeconds)),
         },
       });
-      console.log('Reminder scheduled');
-    } catch (error) {
-      console.error('Failed to schedule notification:', error);
+    } catch {
+      // Silent fail - notification scheduling is not critical
     }
   };
 

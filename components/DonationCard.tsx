@@ -26,21 +26,21 @@ export default function DonationCard() {
         if (Platform.OS === 'web') {
           return null;
         }
-        
+
         const apiKey = Platform.OS === 'ios' ? REVENUECAT_API_KEY_IOS : REVENUECAT_API_KEY_ANDROID;
-        
+
         if (apiKey.includes('your_')) {
-          console.log('RevenueCat not configured yet - using placeholder');
+          // RevenueCat not configured - skip initialization
           return null;
         }
 
         await Purchases.configure({ apiKey });
         setIsConfigured(true);
-        
+
         const offerings = await Purchases.getOfferings();
         return offerings.current;
-      } catch (error) {
-        console.log('RevenueCat not available:', error);
+      } catch {
+        // RevenueCat not available on this platform
         return null;
       }
     },
@@ -100,7 +100,7 @@ export default function DonationCard() {
         <Sparkles color="#F59E0B" size={16} />
         <Sparkles color="#F59E0B" size={12} style={styles.sparkleOffset} />
       </View>
-      
+
       <View style={styles.iconContainer}>
         <Coffee color="#92400E" size={28} />
       </View>

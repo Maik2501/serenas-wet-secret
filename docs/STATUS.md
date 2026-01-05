@@ -13,6 +13,7 @@
 | Code aufgeräumt (Console.logs, ErrorBoundary) | ✅ | 29.12.2024 |
 | Privacy Policy hinzugefügt | ✅ | 29.12.2024 |
 | EAS Build konfiguriert | ✅ | 04.01.2026 |
+| iOS Build erstellt | ✅ | 04.01.2026 |
 | App Store Texte vorbereitet | ✅ | 04.01.2026 |
 | RevenueCat Projekt erstellt | ✅ | 04.01.2026 |
 
@@ -20,12 +21,10 @@
 
 ## ⏳ Wartet auf Apple Developer Account
 
-| Aufgabe | Status | Voraussetzung |
-|---------|--------|---------------|
-| Bundle ID registrieren | ⏳ | Developer Account aktiv |
-| App in App Store Connect erstellen | ⏳ | Bundle ID registriert |
-| iOS Build erstellen | ⏳ | App in ASC |
-| RevenueCat mit Apple verbinden | ⏳ | App in ASC |
+| Bundle ID registrieren | ✅ | Erledigt |
+| App in App Store Connect erstellen | ✅ | Erledigt |
+| iOS Build erstellen | ✅ | Erledigt |
+| RevenueCat mit Apple verbinden | ⏳ | ASC Shared Secret nötig |
 | In-App Purchase Produkt anlegen | ⏳ | App in ASC |
 
 ---

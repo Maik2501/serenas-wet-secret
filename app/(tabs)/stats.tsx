@@ -244,7 +244,7 @@ export default function StatsScreen() {
 
       const lastCryDate = sortedDates[sortedDates.length - 1];
       const daysSinceLast = Math.floor((today.getTime() - lastCryDate) / (24 * 60 * 60 * 1000));
-      currentDryStreak = daysSinceLast;
+      currentDryStreak = Math.max(0, daysSinceLast);
       longestDryStreak = Math.max(longestDryStreak, currentDryStreak);
 
       // Calculate current crying streak (if today or recent days are crying days)

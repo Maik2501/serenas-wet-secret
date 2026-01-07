@@ -171,10 +171,10 @@ export const [JournalContext, useJournal] = createContextHook(() => {
     }
   };
 
-  const updateEntry = (id: string, content: string, wasCrying: boolean, customDate: Date) => {
+  const updateEntry = (id: string, content: string, wasCrying: boolean, customDate: Date, intensity?: CryIntensity) => {
     const oldEntry = entries.find(e => e.id === id);
     const updated = entries.map(e =>
-      e.id === id ? { ...e, content, wasCrying, createdAt: customDate.getTime() } : e
+      e.id === id ? { ...e, content, wasCrying, createdAt: customDate.getTime(), intensity: wasCrying ? intensity : undefined } : e
     ).sort((a, b) => b.createdAt - a.createdAt);
     setEntries(updated);
     syncEntriesMutation.mutate(updated);

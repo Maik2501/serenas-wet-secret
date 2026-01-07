@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Helper to get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+// Helper function to get YYYY-MM-DD in local timezone (avoids UTC offset issues)
 const getLocalDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -36,6 +36,7 @@ export default function CalendarScreen() {
     });
     return counts;
   }, [entries]);
+
 
   const calendar = useMemo(() => {
     const year = selectedMonth.getFullYear();

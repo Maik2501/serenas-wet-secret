@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import type { CryingDay, CryIntensity, JournalEntry } from '../types/journal';
 
-// Helper to get local date string in YYYY-MM-DD format (avoids timezone issues with toISOString)
+// Helper function to get YYYY-MM-DD in local timezone (avoids UTC offset issues)
 const getLocalDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

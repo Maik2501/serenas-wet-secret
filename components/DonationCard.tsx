@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,7 +17,6 @@ const REVENUECAT_API_KEY_ANDROID = 'your_android_api_key'; // TODO: Add Android 
 const PRODUCT_ID = 'tip_199';
 
 export default function DonationCard() {
-  const [isConfigured, setIsConfigured] = useState(false);
 
   const { data: offerings, isLoading: loadingOfferings } = useQuery({
     queryKey: ['offerings'],
@@ -35,12 +34,23 @@ export default function DonationCard() {
         }
 
         await Purchases.configure({ apiKey });
-        setIsConfigured(true);
 
         const offerings = await Purchases.getOfferings();
+
+        if (!offerings.current) {
+          console.warn('RevenueCat: No current offering set');
+          return null;
+        }
+
+        if (offerings.current.availablePackages.length === 0) {
+          console.warn('RevenueCat: Current offering has no packages');
+          return null;
+        }
+
         return offerings.current;
-      } catch {
+      } catch (error) {
         // RevenueCat not available on this platform
+        console.error('RevenueCat error:', error);
         return null;
       }
     },
@@ -75,10 +85,10 @@ export default function DonationCard() {
       return;
     }
 
-    if (!isConfigured || !offerings) {
+    if (!offerings) {
       Alert.alert(
-        'Coming Soon',
-        'Donations will be available once the app is published to the App Store. Thank you for your support!'
+        'Temporarily Unavailable',
+        'Unable to load purchase options. Please check your internet connection and try again.'
       );
       return;
     }

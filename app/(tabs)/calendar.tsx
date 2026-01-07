@@ -12,6 +12,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// Helper function to get YYYY-MM-DD in local timezone (avoids UTC offset issues)
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const { entries, getEntriesForDate, isLoading } = useJournal();
@@ -22,49 +30,50 @@ export default function CalendarScreen() {
     const counts: Record<string, number> = {};
     entries.forEach(entry => {
       if (entry.wasCrying) {
-        const dateStr = new Date(entry.createdAt).toISOString().split('T')[0];
+        const dateStr = getLocalDateString(new Date(entry.createdAt));
         counts[dateStr] = (counts[dateStr] || 0) + 1;
       }
     });
     return counts;
   }, [entries]);
 
+
   const calendar = useMemo(() => {
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth();
-    
+
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     const weeks: ({ day: number; date: string; hasCried: boolean; cryCount: number } | null)[][] = [];
     let currentWeek: ({ day: number; date: string; hasCried: boolean; cryCount: number } | null)[] = [];
-    
+
     for (let i = 0; i < startingDayOfWeek; i++) {
       currentWeek.push(null);
     }
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+      const dateStr = getLocalDateString(new Date(year, month, day));
       const cryCount = cryCountsByDate[dateStr] || 0;
       const hasCried = cryCount > 0;
-      
+
       currentWeek.push({ day, date: dateStr, hasCried, cryCount });
-      
+
       if (currentWeek.length === 7) {
         weeks.push(currentWeek);
         currentWeek = [];
       }
     }
-    
+
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) {
         currentWeek.push(null);
       }
       weeks.push(currentWeek);
     }
-    
+
     return weeks;
   }, [selectedMonth, cryCountsByDate]);
 
@@ -84,18 +93,18 @@ export default function CalendarScreen() {
   const { totalCries, daysWithCrying } = useMemo(() => {
     let total = 0;
     const daysSet = new Set<string>();
-    
+
     entries.forEach(entry => {
       if (entry.wasCrying) {
         const entryDate = new Date(entry.createdAt);
-        if (entryDate.getMonth() === selectedMonth.getMonth() && 
-            entryDate.getFullYear() === selectedMonth.getFullYear()) {
+        if (entryDate.getMonth() === selectedMonth.getMonth() &&
+          entryDate.getFullYear() === selectedMonth.getFullYear()) {
           total++;
-          daysSet.add(entryDate.toISOString().split('T')[0]);
+          daysSet.add(getLocalDateString(entryDate));
         }
       }
     });
-    
+
     return { totalCries: total, daysWithCrying: daysSet.size };
   }, [entries, selectedMonth]);
 
@@ -142,9 +151,9 @@ export default function CalendarScreen() {
               <Text style={styles.monthButtonText}>←</Text>
             </Pressable>
             <Text style={styles.monthTitle}>
-              {selectedMonth.toLocaleDateString('en-US', { 
-                month: 'long', 
-                year: 'numeric' 
+              {selectedMonth.toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric'
               })}
             </Text>
             <Pressable onPress={() => changeMonth(1)} style={styles.monthButton}>
@@ -163,8 +172,8 @@ export default function CalendarScreen() {
           {calendar.map((week, weekIdx) => (
             <View key={weekIdx} style={styles.weekRow}>
               {week.map((day, dayIdx) => (
-                <Pressable 
-                  key={dayIdx} 
+                <Pressable
+                  key={dayIdx}
                   style={styles.dayCell}
                   onPress={() => day && handleDayPress(day.date)}
                   disabled={!day}
@@ -215,7 +224,7 @@ export default function CalendarScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoEmoji}>💡</Text>
           <Text style={styles.infoText}>
-            You&apos;ll get a reminder if you haven&apos;t cried in 24+ hours. 
+            You&apos;ll get a reminder if you haven&apos;t cried in 24+ hours.
             It&apos;s okay to let it out! 🫂
           </Text>
         </View>
@@ -227,8 +236,8 @@ export default function CalendarScreen() {
         animationType="fade"
         onRequestClose={() => setSelectedDayEntries(null)}
       >
-        <Pressable 
-          style={styles.modalOverlay} 
+        <Pressable
+          style={styles.modalOverlay}
           onPress={() => setSelectedDayEntries(null)}
         >
           <View style={styles.modalContent}>
@@ -240,14 +249,14 @@ export default function CalendarScreen() {
                   day: 'numeric',
                 })}
               </Text>
-              <Pressable 
+              <Pressable
                 onPress={() => setSelectedDayEntries(null)}
                 style={styles.closeButton}
               >
                 <X color="#64748B" size={20} />
               </Pressable>
             </View>
-            
+
             <ScrollView style={styles.entriesList} showsVerticalScrollIndicator={false}>
               {selectedDayEntries?.entries.length === 0 ? (
                 <View style={styles.noEntriesContainer}>

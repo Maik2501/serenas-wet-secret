@@ -6,6 +6,14 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import type { CryingDay, CryIntensity, JournalEntry } from '../types/journal';
 
+// Helper function to get YYYY-MM-DD in local timezone (avoids UTC offset issues)
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const STORAGE_KEY_ENTRIES = 'journal_entries';
 const STORAGE_KEY_CRYING = 'crying_days';
 
@@ -75,12 +83,12 @@ export const [JournalContext, useJournal] = createContextHook(() => {
     if (Platform.OS !== 'web') {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
-      
+
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-      
+
       // Permissions not granted - notifications won't work but app continues
     }
   };
@@ -141,9 +149,9 @@ export const [JournalContext, useJournal] = createContextHook(() => {
     syncEntriesMutation.mutate(updated);
 
     if (wasCrying) {
-      const dateStr = entryDate.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(entryDate);
       const existingDay = cryingDays.find(d => d.date === dateStr);
-      
+
       if (!existingDay) {
         const newCryingDay: CryingDay = {
           date: dateStr,
@@ -154,7 +162,7 @@ export const [JournalContext, useJournal] = createContextHook(() => {
         setCryingDays(updatedCrying);
         syncCryingMutation.mutate(updatedCrying);
       } else {
-        const updatedCrying = cryingDays.map(d => 
+        const updatedCrying = cryingDays.map(d =>
           d.date === dateStr ? { ...d, timestamp: entryDate.getTime(), count: (d.count || 1) + 1 } : d
         );
         setCryingDays(updatedCrying);
@@ -165,15 +173,15 @@ export const [JournalContext, useJournal] = createContextHook(() => {
 
   const updateEntry = (id: string, content: string, wasCrying: boolean, customDate: Date) => {
     const oldEntry = entries.find(e => e.id === id);
-    const updated = entries.map(e => 
+    const updated = entries.map(e =>
       e.id === id ? { ...e, content, wasCrying, createdAt: customDate.getTime() } : e
     ).sort((a, b) => b.createdAt - a.createdAt);
     setEntries(updated);
     syncEntriesMutation.mutate(updated);
 
     if (oldEntry) {
-      const oldDateStr = new Date(oldEntry.createdAt).toISOString().split('T')[0];
-      const newDateStr = customDate.toISOString().split('T')[0];
+      const oldDateStr = getLocalDateString(new Date(oldEntry.createdAt));
+      const newDateStr = getLocalDateString(customDate);
 
       let updatedCrying = [...cryingDays];
 
@@ -211,7 +219,7 @@ export const [JournalContext, useJournal] = createContextHook(() => {
 
   const getEntriesForDate = (dateStr: string) => {
     return entries.filter(e => {
-      const entryDate = new Date(e.createdAt).toISOString().split('T')[0];
+      const entryDate = getLocalDateString(new Date(e.createdAt));
       return entryDate === dateStr;
     });
   };

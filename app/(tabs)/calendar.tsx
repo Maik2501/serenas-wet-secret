@@ -1,10 +1,12 @@
 import { useJournal } from '@/contexts/JournalContext';
 import { CryIntensity, CRY_INTENSITY_LABELS, CRY_INTENSITY_EMOJIS, JournalEntry } from '@/types/journal';
-import { Calendar as CalendarIcon, X, Pencil, Clock } from 'lucide-react-native';
+import { Calendar as CalendarIcon, X, Pencil, Clock, Trash2 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,7 +26,7 @@ const getLocalDateString = (date: Date): string => {
 
 export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
-  const { entries, getEntriesForDate, updateEntry, isLoading } = useJournal();
+  const { entries, getEntriesForDate, updateEntry, deleteEntry, isLoading } = useJournal();
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedDayEntries, setSelectedDayEntries] = useState<{ date: string; entries: any[] } | null>(null);
 
@@ -127,6 +129,33 @@ export default function CalendarScreen() {
 
   const handleCancelEdit = () => {
     setEditingEntry(null);
+  };
+
+  const handleDeleteEntry = () => {
+    if (!editingEntry) return;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Delete this entry?')) {
+        deleteEntry(editingEntry.id);
+        setEditingEntry(null);
+      }
+    } else {
+      Alert.alert(
+        'Delete Entry',
+        'Are you sure you want to delete this entry?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              deleteEntry(editingEntry.id);
+              setEditingEntry(null);
+            },
+          },
+        ]
+      );
+    }
   };
 
   const generateDateOptions = () => {
@@ -452,6 +481,9 @@ export default function CalendarScreen() {
 
               {/* Action Buttons */}
               <View style={styles.editActionRow}>
+                <Pressable onPress={handleDeleteEntry} style={styles.editDeleteButton}>
+                  <Trash2 color="#EF4444" size={20} />
+                </Pressable>
                 <Pressable onPress={handleCancelEdit} style={styles.editCancelButton}>
                   <Text style={styles.editCancelButtonText}>Cancel</Text>
                 </Pressable>
@@ -980,6 +1012,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
+  },
+  editDeleteButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editCancelButtonText: {
     fontSize: 15,

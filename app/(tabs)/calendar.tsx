@@ -102,11 +102,16 @@ export default function CalendarScreen() {
   };
 
   const handleEditEntry = (entry: JournalEntry) => {
-    setEditingEntry(entry);
-    setEditContent(entry.content);
-    setEditDate(new Date(entry.createdAt));
-    setEditWasCrying(entry.wasCrying);
-    setEditIntensity(entry.intensity || 2);
+    // Close the day entries modal first to avoid iOS nested modal rendering issues
+    setSelectedDayEntries(null);
+    // Use setTimeout to ensure the first modal is fully closed before opening the edit modal
+    setTimeout(() => {
+      setEditingEntry(entry);
+      setEditContent(entry.content);
+      setEditDate(new Date(entry.createdAt));
+      setEditWasCrying(entry.wasCrying);
+      setEditIntensity(entry.intensity || 2);
+    }, 100);
   };
 
   const handleSaveEdit = () => {
